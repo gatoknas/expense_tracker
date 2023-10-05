@@ -5,7 +5,9 @@ import 'package:expense_tracker/models/expense.dart';
 final formatter = DateFormat.yMd();
 
 class NewExpense extends StatefulWidget {
-  const NewExpense({super.key});
+  const NewExpense({super.key, required this.onAddExpense});
+
+  final void Function(Expense expense) onAddExpense;
 
   @override
   State<NewExpense> createState() => _NewExpenseState();
@@ -18,7 +20,7 @@ class _NewExpenseState extends State<NewExpense> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       child: Column(
         children: [
           TextField(
@@ -91,11 +93,7 @@ class _NewExpenseState extends State<NewExpense> {
                   },
                   child: const Text('Cancel')),
               ElevatedButton(
-                  onPressed: () {
-                    print(_titleController.text);
-                    print(_amountController.text);
-                    print(formatter.format(_selectedDate!));
-                  },
+                  onPressed: _submitExpenseData,
                   child: const Text('Save Expense'))
             ],
           )
@@ -103,8 +101,6 @@ class _NewExpenseState extends State<NewExpense> {
       ),
     );
   }
-
-  var _enteredTitle = '';
 
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
@@ -114,10 +110,6 @@ class _NewExpenseState extends State<NewExpense> {
     _titleController.dispose();
     _amountController.dispose();
     super.dispose();
-  }
-
-  void _saveTitleInput(String value) {
-    _enteredTitle = value;
   }
 
   void _presentDatePicker() async {
@@ -133,5 +125,41 @@ class _NewExpenseState extends State<NewExpense> {
     setState(() {
       _selectedDate = pickedDate;
     });
+  }
+
+  void _submitExpenseData() {
+    final enteredAmount = double.tryParse(_amountController.text);
+    final amountIsInvalid = enteredAmount == null || enteredAmount <= 0;
+
+    // Error control
+    if (_titleController.text.trim().isEmpty ||
+        amountIsInvalid ||
+        _selectedDate == null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Invalid input'),
+          content: const Text('Please make sure valid values were entered'),
+          actions: [
+            TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Okay'))
+          ],
+        ),
+      );
+
+      // Stop any code beyond the error
+      return;
+    }
+
+    var createdExpense = Expense(
+        title: _titleController.text,
+        amount: enteredAmount,
+        date: _selectedDate!,
+        category: _selectedCategory);
+
+    widget.onAddExpense(createdExpense);
   }
 }
